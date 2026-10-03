@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int           @id @default(autoincrement())
+  deviceId     String        @unique @map("device_id") @db.VarChar(128)
+  name         String?       @db.VarChar(100)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  transactions Transaction[]
+  smsLogs      SmsLog[]
+
+  @@map("users")
+}
+
+enum TxType {
+  INCOME
+  EXPENSE
+}
+
+enum TxSource {
+  CASH
+  OVO
+  GOPAY
+  DANA
+  SHOPEEPAY
+  OTHER
+}
+
+model Transaction {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       TxType
+  source     TxSource  @default(OTHER)
+  amount     Int
+  note       String?   @db.VarChar(255)
+  rawText    String?   @map("raw_text") @db.Text
+  occurredAt DateTime  @map("occurred_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  smsLogs    SmsLog[]
+
+  @@index([userId, occurredAt])
+  @@map("transactions")
+}
+
+enum SmsStatus {
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+model SmsLog {
+  id            Int          @id @default(autoincrement())
+  userId        Int          @map("user_id")
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender        String?      @db.VarChar(64)
+  rawText       String       @map("raw_text") @db.Text
+  status        SmsStatus
+  reason        String?      @db.VarChar(255)
+  transactionId Int?         @map("transaction_id")
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("sms_logs")
+}
