@@ -1,0 +1,8 @@
+{
+  "name": "sms-receiver",
+  "version": "0.1.0",
+  "description": "Local Expo module DompetKu: terima SMS e-wallet dan teruskan ke backend",
+  "main": "src/index.ts",
+  "license": "UNLICENSED",
+  "private": true
+}

@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "DompetKu",
+    "slug": "dompetku",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "dompetku",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "id.my.hanmeini.dompetku"
     },
     "android": {
+      "package": "id.my.hanmeini.dompetku",
+      "permissions": ["android.permission.RECEIVE_SMS", "android.permission.READ_SMS"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +24,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": ["./plugins/withSmsReceiver.js"]
   }
 }
