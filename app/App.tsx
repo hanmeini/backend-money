@@ -2,7 +2,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Button,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   Transaction,
   TxSource,
@@ -25,8 +25,24 @@ import { getDeviceId } from './src/device';
 import { configureSmsForwarder, ensureSmsPermission, flushPendingQueue } from './src/sms';
 
 type Tab = 'dashboard' | 'tambah' | 'riwayat';
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const BLUE = '#007AFF';
+const GREEN = '#34C759';
+const RED = '#FF3B30';
+const BG = '#F2F2F7';
+const CARD = '#FFFFFF';
+const LABEL = '#000000';
+const SECONDARY = '#8E8E93';
+const SEPARATOR = '#E5E5EA';
 
 const SOURCES: TxSource[] = ['CASH', 'OVO', 'GOPAY', 'DANA', 'SHOPEEPAY', 'OTHER'];
+
+const TABS: { key: Tab; label: string; icon: IconName; iconActive: IconName }[] = [
+  { key: 'dashboard', label: 'Dompet', icon: 'wallet-outline', iconActive: 'wallet' },
+  { key: 'tambah', label: 'Tambah', icon: 'add-circle-outline', iconActive: 'add-circle' },
+  { key: 'riwayat', label: 'Riwayat', icon: 'receipt-outline', iconActive: 'receipt' },
+];
 
 function formatRp(n: number): string {
   return `Rp${new Intl.NumberFormat('id-ID').format(n)}`;
@@ -137,140 +153,258 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <StatusBar style="auto" />
-      <View style={styles.header}>
-        <Text style={styles.title}>DompetKu</Text>
-        <Text style={styles.subtitle}>
-          {smsReady ? 'Otomatis SMS aktif' : 'Mode manual (izin SMS belum diberikan)'}
-        </Text>
-      </View>
+      <StatusBar style="dark" />
+      <View style={styles.body}>
+        <StatusPill active={smsReady} />
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" />
-        </View>
-      ) : (
-        <View style={styles.body}>
-          {error && <Text style={styles.error}>{error}</Text>}
-
-          {tab === 'dashboard' && dashboard && (
-            <View>
-              <View style={styles.card}>
-                <Text style={styles.cardLabel}>Sisa Uang Aman untuk Jajan</Text>
-                <Text style={styles.bigNumber}>{formatRp(dashboard.sisaUangAman)}</Text>
-                <Text style={styles.cardSub}>
-                  {formatRp(dashboard.amanPerHari)}/hari · sisa {dashboard.sisaHari} hari (
-                  {dashboard.periode})
-                </Text>
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={BLUE} />
+          </View>
+        ) : (
+          <>
+            {error && (
+              <View style={styles.errorBox}>
+                <Ionicons name="alert-circle-outline" size={16} color={RED} />
+                <Text style={styles.errorText}>{error}</Text>
               </View>
-              <View style={styles.row}>
-                <View style={[styles.card, styles.half]}>
-                  <Text style={styles.cardLabel}>Masuk</Text>
-                  <Text style={[styles.number, styles.income]}>{formatRp(dashboard.totalMasuk)}</Text>
-                </View>
-                <View style={[styles.card, styles.half]}>
-                  <Text style={styles.cardLabel}>Keluar</Text>
-                  <Text style={[styles.number, styles.expense]}>
-                    {formatRp(dashboard.totalKeluar)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.sectionTitle}>Transaksi Terakhir</Text>
-              {dashboard.transaksiTerakhir.map((t) => (
-                <TransactionRow key={t.id} tx={t} />
-              ))}
-              <Button title="Muat ulang" onPress={() => void refreshDashboard()} />
-            </View>
-          )}
+            )}
 
-          {tab === 'tambah' && (
-            <View>
-              <Text style={styles.sectionTitle}>Tambah Transaksi Manual</Text>
-              <Text style={styles.label}>Nominal (Rp)</Text>
-              <TextInput
-                style={styles.input}
-                value={nominal}
-                onChangeText={setNominal}
-                keyboardType="numeric"
-                placeholder="mis. 25000"
+            {tab === 'dashboard' && dashboard && (
+              <FlatList
+                data={dashboard.transaksiTerakhir}
+                keyExtractor={(t) => String(t.id)}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                  <>
+                    <Text style={styles.largeTitle}>Dompet</Text>
+                    <View style={styles.heroCard}>
+                      <Text style={styles.heroLabel}>SISA UANG AMAN UNTUK JAJAN</Text>
+                      <Text style={styles.heroNumber}>{formatRp(dashboard.sisaUangAman)}</Text>
+                      <View style={styles.heroSubRow}>
+                        <Ionicons name="calendar-outline" size={13} color="#FFFFFFCC" />
+                        <Text style={styles.heroSub}>
+                          {formatRp(dashboard.amanPerHari)}/hari · sisa {dashboard.sisaHari} hari
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.row}>
+                      <View style={[styles.card, styles.half]}>
+                        <View style={styles.miniRow}>
+                          <View style={[styles.dot, { backgroundColor: GREEN }]} />
+                          <Text style={styles.cardLabel}>Masuk</Text>
+                        </View>
+                        <Text style={[styles.number, { color: GREEN }]}>
+                          {formatRp(dashboard.totalMasuk)}
+                        </Text>
+                        <Text style={styles.cardSub}>{dashboard.periode}</Text>
+                      </View>
+                      <View style={[styles.card, styles.half]}>
+                        <View style={styles.miniRow}>
+                          <View style={[styles.dot, { backgroundColor: RED }]} />
+                          <Text style={styles.cardLabel}>Keluar</Text>
+                        </View>
+                        <Text style={[styles.number, { color: RED }]}>
+                          {formatRp(dashboard.totalKeluar)}
+                        </Text>
+                        <Text style={styles.cardSub}>{dashboard.periode}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.sectionTitle}>Terakhir</Text>
+                  </>
+                }
+                renderItem={({ item }) => <TransactionRow tx={item} />}
               />
-              <Text style={styles.label}>Jenis</Text>
-              <View style={styles.row}>
-                {(['EXPENSE', 'INCOME'] as TxType[]).map((t) => (
-                  <Chip key={t} label={t === 'EXPENSE' ? 'Keluar' : 'Masuk'} active={tipe === t} onPress={() => setTipe(t)} />
-                ))}
-              </View>
-              <Text style={styles.label}>Sumber Dana</Text>
-              <View style={styles.chipWrap}>
-                {SOURCES.map((s) => (
-                  <Chip key={s} label={s} active={sumber === s} onPress={() => setSumber(s)} />
-                ))}
-              </View>
-              <Text style={styles.label}>Catatan</Text>
-              <TextInput
-                style={styles.input}
-                value={catatan}
-                onChangeText={setCatatan}
-                placeholder="mis. Kopi"
-              />
-              <Button title={saving ? 'Menyimpan...' : 'Simpan'} onPress={() => void onSubmitManual()} disabled={saving} />
-            </View>
-          )}
+            )}
 
-          {tab === 'riwayat' && (
-            <View style={styles.flex}>
-              <View style={styles.rowBetween}>
-                <Button title="<" onPress={() => setMonth((m) => shiftMonth(m, -1))} />
-                <Text style={styles.sectionTitle}>{monthLabel}</Text>
-                <Button
-                  title=">"
-                  onPress={() => setMonth((m) => shiftMonth(m, 1))}
-                  disabled={month >= currentMonth()}
+            {tab === 'tambah' && (
+              <FlatList
+                data={[]}
+                renderItem={null}
+                showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                  <>
+                    <Text style={styles.largeTitle}>Tambah</Text>
+                    <View style={styles.card}>
+                      <Text style={styles.groupLabel}>NOMINAL</Text>
+                      <View style={styles.amountRow}>
+                        <Text style={styles.rpPrefix}>Rp</Text>
+                        <TextInput
+                          style={styles.amountInput}
+                          value={nominal}
+                          onChangeText={setNominal}
+                          keyboardType="numeric"
+                          placeholder="0"
+                          placeholderTextColor={SECONDARY}
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.card}>
+                      <Text style={styles.groupLabel}>JENIS</Text>
+                      <View style={styles.segment}>
+                        {(['EXPENSE', 'INCOME'] as TxType[]).map((t) => (
+                          <TouchableOpacity
+                            key={t}
+                            style={[styles.segmentItem, tipe === t && styles.segmentActive]}
+                            onPress={() => setTipe(t)}>
+                            <Ionicons
+                              name={t === 'EXPENSE' ? 'arrow-up-circle' : 'arrow-down-circle'}
+                              size={16}
+                              color={tipe === t ? LABEL : SECONDARY}
+                            />
+                            <Text style={[styles.segmentText, tipe === t && styles.segmentTextActive]}>
+                              {t === 'EXPENSE' ? 'Keluar' : 'Masuk'}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.card}>
+                      <Text style={styles.groupLabel}>SUMBER DANA</Text>
+                      <View style={styles.chipWrap}>
+                        {SOURCES.map((s) => (
+                          <TouchableOpacity
+                            key={s}
+                            style={[styles.sourceChip, sumber === s && styles.sourceChipActive]}
+                            onPress={() => setSumber(s)}>
+                            <Text
+                              style={[
+                                styles.sourceChipText,
+                                sumber === s && styles.sourceChipTextActive,
+                              ]}>
+                              {s}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.card}>
+                      <Text style={styles.groupLabel}>CATATAN</Text>
+                      <TextInput
+                        style={styles.noteInput}
+                        value={catatan}
+                        onChangeText={setCatatan}
+                        placeholder="mis. Kopi susu"
+                        placeholderTextColor={SECONDARY}
+                      />
+                    </View>
+
+                    <TouchableOpacity
+                      style={[styles.primaryButton, saving && styles.primaryButtonDisabled]}
+                      onPress={() => void onSubmitManual()}
+                      disabled={saving}>
+                      <Text style={styles.primaryButtonText}>
+                        {saving ? 'Menyimpan…' : 'Simpan Transaksi'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                }
+              />
+            )}
+
+            {tab === 'riwayat' && (
+              <View style={styles.flex}>
+                <Text style={styles.largeTitle}>Riwayat</Text>
+                <View style={styles.card}>
+                  <View style={styles.rowBetween}>
+                    <StepperButton
+                      icon="chevron-back"
+                      onPress={() => setMonth((m) => shiftMonth(m, -1))}
+                    />
+                    <View style={styles.center}>
+                      <Text style={styles.monthLabel}>{monthLabel}</Text>
+                      <Text style={styles.cardSub}>{historyTotal} transaksi</Text>
+                    </View>
+                    <StepperButton
+                      icon="chevron-forward"
+                      onPress={() => setMonth((m) => shiftMonth(m, 1))}
+                      disabled={month >= currentMonth()}
+                    />
+                  </View>
+                </View>
+                <FlatList
+                  data={history}
+                  keyExtractor={(t) => String(t.id)}
+                  renderItem={({ item }) => <TransactionRow tx={item} />}
+                  onRefresh={() => void refreshHistory()}
+                  refreshing={false}
+                  showsVerticalScrollIndicator={false}
                 />
               </View>
-              <Text style={styles.cardSub}>Total {historyTotal} transaksi</Text>
-              <FlatList
-                data={history}
-                keyExtractor={(t) => String(t.id)}
-                renderItem={({ item }) => <TransactionRow tx={item} />}
-                onRefresh={() => void refreshHistory()}
-                refreshing={false}
-              />
-            </View>
-          )}
-        </View>
-      )}
+            )}
+          </>
+        )}
+      </View>
 
-      <View style={styles.tabs}>
-        {(
-          [
-            ['dashboard', 'Dompet'],
-            ['tambah', 'Tambah'],
-            ['riwayat', 'Riwayat'],
-          ] as [Tab, string][]
-        ).map(([key, label]) => (
-          <TouchableOpacity key={key} style={[styles.tab, tab === key && styles.tabActive]} onPress={() => setTab(key)}>
-            <Text style={tab === key ? styles.tabTextActive : styles.tabText}>{label}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.tabBar}>
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          return (
+            <TouchableOpacity key={t.key} style={styles.tabItem} onPress={() => setTab(t.key)}>
+              <Ionicons name={active ? t.iconActive : t.icon} size={24} color={active ? BLUE : SECONDARY} />
+              <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </SafeAreaView>
   );
 }
 
+function StatusPill({ active }: { active: boolean }) {
+  return (
+    <View style={[styles.pill, active ? styles.pillOn : styles.pillOff]}>
+      <View style={[styles.pillDot, { backgroundColor: active ? GREEN : SECONDARY }]} />
+      <Text style={styles.pillText}>
+        {active ? 'Sinkron SMS otomatis aktif' : 'Mode manual · izinkan akses SMS'}
+      </Text>
+    </View>
+  );
+}
+
+function StepperButton({
+  icon,
+  onPress,
+  disabled,
+}: {
+  icon: IconName;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[styles.stepper, disabled && styles.stepperDisabled]}
+      onPress={onPress}
+      disabled={disabled}>
+      <Ionicons name={icon} size={18} color={disabled ? SEPARATOR : BLUE} />
+    </TouchableOpacity>
+  );
+}
+
 function TransactionRow({ tx }: { tx: Transaction }) {
-  const sign = tx.type === 'INCOME' ? '+' : '-';
+  const isIn = tx.type === 'INCOME';
+  const sign = isIn ? '+' : '−';
   return (
     <View style={styles.txRow}>
+      <View style={[styles.txIcon, { backgroundColor: isIn ? '#E5F9EC' : '#FDECEC' }]}>
+        <Ionicons
+          name={isIn ? 'arrow-down' : 'arrow-up'}
+          size={18}
+          color={isIn ? GREEN : RED}
+        />
+      </View>
       <View style={styles.flex}>
         <Text style={styles.txNote} numberOfLines={1}>
           {tx.note ?? tx.source}
         </Text>
-        <Text style={styles.cardSub}>
+        <Text style={styles.txMeta}>
           {tx.source} · {new Date(tx.occurredAt).toLocaleDateString('id-ID')}
         </Text>
       </View>
-      <Text style={[styles.number, tx.type === 'INCOME' ? styles.income : styles.expense]}>
+      <Text style={[styles.txAmount, { color: isIn ? GREEN : LABEL }]}>
         {sign}
         {formatRp(tx.amount)}
       </Text>
@@ -278,46 +412,106 @@ function TransactionRow({ tx }: { tx: Transaction }) {
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
-      <Text style={active ? styles.chipTextActive : styles.chipText}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f6f7f9' },
-  header: { padding: 16, backgroundColor: '#1a73e8' },
-  title: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
-  subtitle: { color: '#d2e3fc', fontSize: 12, marginTop: 2 },
-  body: { flex: 1, padding: 16 },
+  safe: { flex: 1, backgroundColor: BG },
+  body: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  error: { color: '#b00020', marginBottom: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, elevation: 1 },
-  cardLabel: { fontSize: 12, color: '#5f6368' },
-  cardSub: { fontSize: 12, color: '#5f6368', marginTop: 4 },
-  bigNumber: { fontSize: 32, fontWeight: 'bold', marginTop: 4 },
-  number: { fontSize: 16, fontWeight: '600' },
-  income: { color: '#188038' },
-  expense: { color: '#b00020' },
+  flex: { flex: 1 },
+  largeTitle: { fontSize: 34, fontWeight: '700', color: LABEL, marginTop: 4, marginBottom: 12 },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: 4,
+  },
+  pillOn: { backgroundColor: '#E5F9EC' },
+  pillOff: { backgroundColor: '#E9E9EE' },
+  pillDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
+  pillText: { fontSize: 12, color: LABEL, fontWeight: '500' },
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FDECEC',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 8,
+    gap: 6,
+  },
+  errorText: { color: RED, fontSize: 13, flex: 1 },
+  heroCard: {
+    backgroundColor: '#000000',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 12,
+  },
+  heroLabel: { color: '#FFFFFF99', fontSize: 11, fontWeight: '600', letterSpacing: 1 },
+  heroNumber: { color: '#FFFFFF', fontSize: 36, fontWeight: '700', marginTop: 6 },
+  heroSubRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 5 },
+  heroSub: { color: '#FFFFFFCC', fontSize: 13 },
   row: { flexDirection: 'row', gap: 12 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  miniRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   half: { flex: 1 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginVertical: 8 },
-  label: { fontSize: 13, color: '#5f6368', marginTop: 8, marginBottom: 4 },
-  input: { backgroundColor: '#fff', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#dadce0' },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  card: { backgroundColor: CARD, borderRadius: 12, padding: 14, marginBottom: 12 },
+  cardLabel: { fontSize: 13, color: SECONDARY },
+  cardSub: { fontSize: 12, color: SECONDARY, marginTop: 4 },
+  number: { fontSize: 18, fontWeight: '700', marginTop: 2 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: LABEL, marginTop: 4, marginBottom: 8 },
+  groupLabel: { fontSize: 11, fontWeight: '600', color: SECONDARY, letterSpacing: 0.8, marginBottom: 8 },
+  amountRow: { flexDirection: 'row', alignItems: 'center' },
+  rpPrefix: { fontSize: 22, fontWeight: '600', color: SECONDARY, marginRight: 6 },
+  amountInput: { flex: 1, fontSize: 28, fontWeight: '700', color: LABEL, paddingVertical: 2 },
+  noteInput: { fontSize: 16, color: LABEL, paddingVertical: 4 },
+  segment: { flexDirection: 'row', backgroundColor: '#E5E5EA', borderRadius: 9, padding: 2 },
+  segmentItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 7,
+    gap: 6,
+  },
+  segmentActive: { backgroundColor: CARD, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 2, elevation: 1 },
+  segmentText: { fontSize: 14, fontWeight: '500', color: SECONDARY },
+  segmentTextActive: { color: LABEL, fontWeight: '600' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: '#e8eaed', marginRight: 8, marginBottom: 8 },
-  chipActive: { backgroundColor: '#1a73e8' },
-  chipText: { color: '#202124' },
-  chipTextActive: { color: '#fff' },
-  txRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 8 },
-  txNote: { fontSize: 14, fontWeight: '500' },
-  flex: { flex: 1 },
-  tabs: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: '#dadce0', backgroundColor: '#fff' },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: { borderTopWidth: 2, borderTopColor: '#1a73e8' },
-  tabText: { color: '#5f6368' },
-  tabTextActive: { color: '#1a73e8', fontWeight: 'bold' },
+  sourceChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: '#EFEFF4' },
+  sourceChipActive: { backgroundColor: BLUE },
+  sourceChipText: { fontSize: 13, fontWeight: '600', color: LABEL },
+  sourceChipTextActive: { color: '#FFFFFF' },
+  primaryButton: { backgroundColor: BLUE, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 4, marginBottom: 24 },
+  primaryButtonDisabled: { opacity: 0.6 },
+  primaryButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
+  monthLabel: { fontSize: 16, fontWeight: '700', color: LABEL, textTransform: 'capitalize' },
+  stepper: { backgroundColor: '#EFEFF4', borderRadius: 20, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
+  stepperDisabled: { opacity: 0.5 },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    gap: 12,
+  },
+  txIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  txNote: { fontSize: 15, fontWeight: '500', color: LABEL },
+  txMeta: { fontSize: 12, color: SECONDARY, marginTop: 2 },
+  txAmount: { fontSize: 15, fontWeight: '700' },
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFFF2',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: SEPARATOR,
+    paddingBottom: 20,
+    paddingTop: 6,
+  },
+  tabItem: { flex: 1, alignItems: 'center', gap: 2 },
+  tabLabel: { fontSize: 10, color: SECONDARY, fontWeight: '500' },
+  tabLabelActive: { color: BLUE, fontWeight: '600' },
 });
