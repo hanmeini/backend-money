@@ -5,6 +5,7 @@ lalu install.
 
 | File | Versi | Keterangan |
 | ---- | ----- | ---------- |
+| `dompetku-v1.1.0.apk` | 1.1.0 (versionCode 2) | Edit/hapus transaksi + token keamanan per-HP |
 | `dompetku-v1.0.0.apk` | 1.0.0 (versionCode 1) | Rilis pertama, release build signed |
 
 ## Cara install di HP
