@@ -7,7 +7,7 @@ export default async function dashboardRoutes(app) {
   app.get("/api/v1/dashboard", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "User tidak ditemukan" });
+      return reply.code(401).send({ error: "Akses ditolak" });
     }
 
     const period = getMonthPeriod(req.query?.month);

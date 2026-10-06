@@ -1,7 +1,7 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
 declare class SmsReceiverModule extends NativeModule<{}> {
-  setConfig(backendUrl: string, deviceId: string): void;
+  setConfig(backendUrl: string, deviceId: string, deviceToken: string): void;
   getPendingMessages(): string;
   clearPendingMessages(): void;
 }

@@ -5,6 +5,11 @@ function readDeviceId(req) {
   return typeof deviceId === "string" && deviceId.trim() ? deviceId.trim() : null;
 }
 
+function readDeviceToken(req) {
+  const token = req.headers["x-device-token"];
+  return typeof token === "string" && token.trim() ? token.trim() : null;
+}
+
 /**
  * Cari user berdasarkan header x-device-id. Tidak membuat user baru.
  */
@@ -25,16 +30,30 @@ export async function findUser(req) {
 
 /**
  * Cari user berdasarkan x-device-id, buat otomatis bila belum ada.
+ * Bila user sudah mengklaim token rahasia, request wajib menyertakan
+ * x-device-token yang sama, kalau tidak user dianggap tidak dikenali.
  */
 export async function findOrCreateUser(req) {
   const deviceId = readDeviceId(req);
-  if (deviceId) {
-    return prisma.user.upsert({
-      where: { deviceId },
-      update: {},
-      create: { deviceId },
-    });
+  if (!deviceId) {
+    return findUser(req);
   }
 
-  return findUser(req);
+  const token = readDeviceToken(req);
+  const user = await prisma.user.findUnique({ where: { deviceId } });
+
+  if (!user) {
+    return prisma.user.create({ data: { deviceId, deviceToken: token } });
+  }
+
+  if (user.deviceToken) {
+    if (!token || token !== user.deviceToken) return null;
+    return user;
+  }
+
+  if (token) {
+    return prisma.user.update({ where: { id: user.id }, data: { deviceToken: token } });
+  }
+
+  return user;
 }

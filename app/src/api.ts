@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './config';
+import { getSession } from './session';
 
 export type TxType = 'INCOME' | 'EXPENSE';
 export type TxSource = 'CASH' | 'OVO' | 'GOPAY' | 'DANA' | 'SHOPEEPAY' | 'OTHER';
@@ -30,11 +31,13 @@ export interface SmsPayload {
 }
 
 async function request<T>(path: string, deviceId: string, init?: RequestInit): Promise<T> {
+  const { deviceToken } = getSession();
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
       'x-device-id': deviceId,
+      ...(deviceToken ? { 'x-device-token': deviceToken } : {}),
       ...(init?.headers ?? {}),
     },
   });

@@ -10,7 +10,7 @@ export default async function transactionRoutes(app) {
   app.post("/api/v1/transactions", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "Header x-device-id wajib diisi" });
+      return reply.code(401).send({ error: "Akses ditolak" });
     }
 
     const body = req.body ?? {};
@@ -43,7 +43,7 @@ export default async function transactionRoutes(app) {
   app.put("/api/v1/transactions/:id", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "Header x-device-id wajib diisi" });
+      return reply.code(401).send({ error: "Akses ditolak" });
     }
 
     const id = Number(req.params?.id);
@@ -99,7 +99,7 @@ export default async function transactionRoutes(app) {
   app.delete("/api/v1/transactions/:id", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "Header x-device-id wajib diisi" });
+      return reply.code(401).send({ error: "Akses ditolak" });
     }
 
     const id = Number(req.params?.id);
@@ -119,7 +119,7 @@ export default async function transactionRoutes(app) {
   app.get("/api/v1/transactions", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "User tidak ditemukan" });
+      return reply.code(401).send({ error: "Akses ditolak" });
     }
 
     const { month, source, type } = req.query ?? {};

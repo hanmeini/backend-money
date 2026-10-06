@@ -1,13 +1,19 @@
 import { parseSms } from "../parsers/index.js";
 import { prisma } from "../lib/prisma.js";
 import { findOrCreateUser } from "../lib/auth.js";
+import { isRateLimited } from "../lib/ratelimit.js";
 import { serializeTransaction } from "../lib/serialize.js";
 
 export default async function smsRoutes(app) {
   app.post("/api/v1/sms/ingest", async (req, reply) => {
     const user = await findOrCreateUser(req);
     if (!user) {
-      return reply.code(401).send({ error: "Header x-device-id wajib diisi" });
+      return reply.code(401).send({ error: "Akses ditolak" });
+    }
+
+    const deviceId = req.headers["x-device-id"];
+    if (isRateLimited(`ingest:${deviceId}`, 60, 60_000)) {
+      return reply.code(429).send({ error: "Terlalu banyak request, coba lagi nanti" });
     }
 
     const { pengirim, teks, timestamp } = req.body ?? {};

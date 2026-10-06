@@ -13,9 +13,9 @@ export async function ensureSmsPermission(): Promise<boolean> {
   return Object.values(result).every((v) => v === PermissionsAndroid.RESULTS.GRANTED);
 }
 
-export function configureSmsForwarder(backendUrl: string, deviceId: string): void {
+export function configureSmsForwarder(backendUrl: string, deviceId: string, deviceToken: string): void {
   if (Platform.OS !== 'android') return;
-  SmsReceiverModule.setConfig(backendUrl, deviceId);
+  SmsReceiverModule.setConfig(backendUrl, deviceId, deviceToken);
 }
 
 export function readPendingQueue(): PendingSms[] {

@@ -25,7 +25,8 @@ import {
   Dashboard,
 } from './src/api';
 import { API_BASE_URL } from './src/config';
-import { getDeviceId } from './src/device';
+import { getDeviceId, getDeviceToken } from './src/device';
+import { setSession } from './src/session';
 import { configureSmsForwarder, ensureSmsPermission, flushPendingQueue } from './src/sms';
 
 type Tab = 'dashboard' | 'tambah' | 'riwayat';
@@ -113,9 +114,11 @@ export default function App() {
     (async () => {
       setLoading(true);
       try {
+        const token = await getDeviceToken();
+        setSession({ deviceId, deviceToken: token });
         const granted = await ensureSmsPermission();
         if (granted) {
-          configureSmsForwarder(API_BASE_URL, deviceId);
+          configureSmsForwarder(API_BASE_URL, deviceId, token);
           await flushPendingQueue(deviceId);
         }
         setSmsReady(granted);

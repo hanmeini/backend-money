@@ -10,6 +10,7 @@ datasource db {
 model User {
   id           Int           @id @default(autoincrement())
   deviceId     String        @unique @map("device_id") @db.VarChar(128)
+  deviceToken  String?       @unique @map("device_token") @db.VarChar(128)
   name         String?       @db.VarChar(100)
   createdAt    DateTime      @default(now()) @map("created_at")
   transactions Transaction[]

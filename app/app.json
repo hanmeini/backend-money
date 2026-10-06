@@ -14,7 +14,10 @@
     "android": {
       "package": "id.my.hanmeini.dompetku",
       "versionCode": 2,
-      "permissions": ["android.permission.RECEIVE_SMS", "android.permission.READ_SMS"],
+      "permissions": [
+        "android.permission.RECEIVE_SMS",
+        "android.permission.READ_SMS"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,6 +29,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["./plugins/withSmsReceiver.js"]
+    "plugins": [
+      "./plugins/withSmsReceiver.js",
+      "expo-secure-store"
+    ]
   }
 }
