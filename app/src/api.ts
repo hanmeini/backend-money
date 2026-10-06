@@ -89,3 +89,16 @@ export function createTransaction(deviceId: string, tx: NewTransaction) {
     body: JSON.stringify(tx),
   });
 }
+
+export function updateTransaction(deviceId: string, id: number, tx: Partial<NewTransaction>) {
+  return request<{ transaction: Transaction }>(`/api/v1/transactions/${id}`, deviceId, {
+    method: 'PUT',
+    body: JSON.stringify(tx),
+  });
+}
+
+export function deleteTransaction(deviceId: string, id: number) {
+  return request<{ deleted: boolean; id: number }>(`/api/v1/transactions/${id}`, deviceId, {
+    method: 'DELETE',
+  });
+}

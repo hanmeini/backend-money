@@ -2,7 +2,9 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Modal,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -16,8 +18,10 @@ import {
   TxSource,
   TxType,
   createTransaction,
+  deleteTransaction,
   getDashboard,
   getTransactions,
+  updateTransaction,
   Dashboard,
 } from './src/api';
 import { API_BASE_URL } from './src/config';
@@ -76,6 +80,13 @@ export default function App() {
   const [month, setMonth] = useState(currentMonth());
   const [history, setHistory] = useState<Transaction[]>([]);
   const [historyTotal, setHistoryTotal] = useState(0);
+
+  const [editing, setEditing] = useState<Transaction | null>(null);
+  const [editNominal, setEditNominal] = useState('');
+  const [editTipe, setEditTipe] = useState<TxType>('EXPENSE');
+  const [editSumber, setEditSumber] = useState<TxSource>('CASH');
+  const [editCatatan, setEditCatatan] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const refreshDashboard = useCallback(async () => {
     try {
@@ -146,6 +157,66 @@ export default function App() {
     }
   }, [nominal, tipe, sumber, catatan, deviceId, refreshDashboard]);
 
+  const openEditor = useCallback((tx: Transaction) => {
+    setEditing(tx);
+    setEditNominal(String(tx.amount));
+    setEditTipe(tx.type);
+    setEditSumber(tx.source);
+    setEditCatatan(tx.note ?? '');
+    setError(null);
+  }, []);
+
+  const onSaveEdit = useCallback(async () => {
+    if (!editing) return;
+    const amount = Number(editNominal.replace(/[^0-9]/g, ''));
+    if (!Number.isInteger(amount) || amount <= 0) {
+      setError('Nominal harus angka positif');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      setError(null);
+      await updateTransaction(deviceId, editing.id, {
+        amount,
+        type: editTipe,
+        source: editSumber,
+        note: editCatatan.trim() || undefined,
+      });
+      setEditing(null);
+      await refreshDashboard();
+      await refreshHistory();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal menyimpan perubahan');
+    } finally {
+      setEditSaving(false);
+    }
+  }, [editing, editNominal, editTipe, editSumber, editCatatan, deviceId, refreshDashboard, refreshHistory]);
+
+  const onDeleteTx = useCallback(() => {
+    if (!editing) return;
+    const id = editing.id;
+    Alert.alert('Hapus transaksi?', 'Data yang dihapus tidak bisa dikembalikan.', [
+      { text: 'Batal', style: 'cancel' },
+      {
+        text: 'Hapus',
+        style: 'destructive',
+        onPress: () => {
+          (async () => {
+            try {
+              setError(null);
+              await deleteTransaction(deviceId, id);
+              setEditing(null);
+              await refreshDashboard();
+              await refreshHistory();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Gagal menghapus transaksi');
+            }
+          })();
+        },
+      },
+    ]);
+  }, [editing, deviceId, refreshDashboard, refreshHistory]);
+
   const monthLabel = useMemo(() => {
     const [y, m] = month.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
@@ -213,7 +284,7 @@ export default function App() {
                     <Text style={styles.sectionTitle}>Terakhir</Text>
                   </>
                 }
-                renderItem={({ item }) => <TransactionRow tx={item} />}
+                renderItem={({ item }) => <TransactionRow tx={item} onPress={() => openEditor(item)} />}
               />
             )}
 
@@ -328,7 +399,7 @@ export default function App() {
                 <FlatList
                   data={history}
                   keyExtractor={(t) => String(t.id)}
-                  renderItem={({ item }) => <TransactionRow tx={item} />}
+                  renderItem={({ item }) => <TransactionRow tx={item} onPress={() => openEditor(item)} />}
                   onRefresh={() => void refreshHistory()}
                   refreshing={false}
                   showsVerticalScrollIndicator={false}
@@ -338,6 +409,79 @@ export default function App() {
           </>
         )}
       </View>
+
+      <Modal visible={editing !== null} animationType="slide" transparent onRequestClose={() => setEditing(null)}>
+        <View style={styles.sheetBackdrop}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Ubah Transaksi</Text>
+
+            <Text style={styles.groupLabel}>NOMINAL</Text>
+            <View style={styles.amountRow}>
+              <Text style={styles.rpPrefix}>Rp</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={editNominal}
+                onChangeText={setEditNominal}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor={SECONDARY}
+              />
+            </View>
+
+            <Text style={styles.groupLabel}>JENIS</Text>
+            <View style={styles.segment}>
+              {(['EXPENSE', 'INCOME'] as TxType[]).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.segmentItem, editTipe === t && styles.segmentActive]}
+                  onPress={() => setEditTipe(t)}>
+                  <Text style={[styles.segmentText, editTipe === t && styles.segmentTextActive]}>
+                    {t === 'EXPENSE' ? 'Keluar' : 'Masuk'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.groupLabel}>SUMBER DANA</Text>
+            <View style={styles.chipWrap}>
+              {SOURCES.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sourceChip, editSumber === s && styles.sourceChipActive]}
+                  onPress={() => setEditSumber(s)}>
+                  <Text style={[styles.sourceChipText, editSumber === s && styles.sourceChipTextActive]}>
+                    {s}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.groupLabel}>CATATAN</Text>
+            <TextInput
+              style={styles.noteInput}
+              value={editCatatan}
+              onChangeText={setEditCatatan}
+              placeholder="mis. Kopi susu"
+              placeholderTextColor={SECONDARY}
+            />
+
+            <TouchableOpacity
+              style={[styles.primaryButton, editSaving && styles.primaryButtonDisabled]}
+              onPress={() => void onSaveEdit()}
+              disabled={editSaving}>
+              <Text style={styles.primaryButtonText}>{editSaving ? 'Menyimpan…' : 'Simpan Perubahan'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteButton} onPress={onDeleteTx}>
+              <Ionicons name="trash-outline" size={16} color={RED} />
+              <Text style={styles.deleteButtonText}>Hapus Transaksi</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setEditing(null)}>
+              <Text style={styles.cancelButtonText}>Batal</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View style={styles.tabBar}>
         {TABS.map((t) => {
@@ -384,11 +528,11 @@ function StepperButton({
   );
 }
 
-function TransactionRow({ tx }: { tx: Transaction }) {
+function TransactionRow({ tx, onPress }: { tx: Transaction; onPress: () => void }) {
   const isIn = tx.type === 'INCOME';
   const sign = isIn ? '+' : '−';
   return (
-    <View style={styles.txRow}>
+    <TouchableOpacity style={styles.txRow} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.txIcon, { backgroundColor: isIn ? '#E5F9EC' : '#FDECEC' }]}>
         <Ionicons
           name={isIn ? 'arrow-down' : 'arrow-up'}
@@ -408,7 +552,8 @@ function TransactionRow({ tx }: { tx: Transaction }) {
         {sign}
         {formatRp(tx.amount)}
       </Text>
-    </View>
+      <Ionicons name="chevron-forward" size={16} color={SECONDARY} />
+    </TouchableOpacity>
   );
 }
 
@@ -514,4 +659,12 @@ const styles = StyleSheet.create({
   tabItem: { flex: 1, alignItems: 'center', gap: 2 },
   tabLabel: { fontSize: 10, color: SECONDARY, fontWeight: '500' },
   tabLabelActive: { color: BLUE, fontWeight: '600' },
+  sheetBackdrop: { flex: 1, backgroundColor: '#00000066', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: BG, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, paddingBottom: 32 },
+  sheetHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: SEPARATOR, alignSelf: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 20, fontWeight: '700', color: LABEL, marginBottom: 12 },
+  deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 6 },
+  deleteButtonText: { color: RED, fontSize: 16, fontWeight: '600' },
+  cancelButton: { alignItems: 'center', paddingVertical: 12 },
+  cancelButtonText: { color: BLUE, fontSize: 16, fontWeight: '500' },
 });
