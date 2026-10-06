@@ -1,5 +1,5 @@
 import { prisma } from "../lib/prisma.js";
-import { findUser, findOrCreateUser } from "../lib/auth.js";
+import { findOrCreateUser } from "../lib/auth.js";
 import { getMonthPeriod } from "../lib/period.js";
 import { serializeTransaction } from "../lib/serialize.js";
 
@@ -41,7 +41,7 @@ export default async function transactionRoutes(app) {
   });
 
   app.get("/api/v1/transactions", async (req, reply) => {
-    const user = await findUser(req);
+    const user = await findOrCreateUser(req);
     if (!user) {
       return reply.code(401).send({ error: "User tidak ditemukan" });
     }

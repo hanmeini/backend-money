@@ -1,11 +1,11 @@
 import { prisma } from "../lib/prisma.js";
-import { findUser } from "../lib/auth.js";
+import { findOrCreateUser } from "../lib/auth.js";
 import { getMonthPeriod, remainingDaysInMonth } from "../lib/period.js";
 import { serializeTransaction } from "../lib/serialize.js";
 
 export default async function dashboardRoutes(app) {
   app.get("/api/v1/dashboard", async (req, reply) => {
-    const user = await findUser(req);
+    const user = await findOrCreateUser(req);
     if (!user) {
       return reply.code(401).send({ error: "User tidak ditemukan" });
     }
